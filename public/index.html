@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta http-equiv="Cache-Control" content="no-store" />
+<title>Hotel Queue & Booking Agent</title>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  :root{--ink:#16263a;--blue:#1f5fae;--bg:#f6f8fb;--card:#fff;--muted:#5b6b7d;--line:#e3e9f0;--green:#2e9e5b;--red:#e23b3b;--amber:#b8860b}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,"Noto Sans JP","Noto Sans Devanagari",system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6}
+  .wrap{max-width:920px;margin:0 auto;padding:18px}
+  header{background:linear-gradient(135deg,#16263a,#b8860b);color:#fff;padding:22px 18px}
+  header h1{font-size:22px;font-weight:900}
+  header p{opacity:.9;font-size:13px;margin-top:4px}
+  .badge{display:inline-block;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.35);padding:3px 10px;border-radius:999px;font-size:11px;margin-top:8px;margin-right:6px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:14px}
+  input,select{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font-size:15px;font-family:inherit;margin-top:6px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .chips{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:#eef3fa;color:var(--blue);border:1px solid #d6e2f5;border-radius:999px;padding:6px 12px;font-size:12px;cursor:pointer}
+  button.go{margin-top:10px;background:var(--blue);color:#fff;font-weight:800;border:none;border-radius:10px;padding:12px 20px;font-size:15px;cursor:pointer}
+  .lang{float:right}
+  .lang button{background:#fff;color:var(--blue);border:1px solid #fff;border-radius:8px;padding:4px 10px;margin-left:6px;cursor:pointer;font-weight:700}
+  .trace{font-family:ui-monospace,Menlo,monospace;font-size:13px}
+  .step{border-left:3px solid var(--line);padding:6px 10px;margin:6px 0;background:#fafcff;border-radius:0 8px 8px 0}
+  .step.join,.step.book,.step.notify{border-color:var(--blue)} .step.surge{border-color:var(--red)} .step.think{border-color:#7a4fd0} .step.done{border-color:var(--amber)}
+  .step b{font-size:11px;text-transform:uppercase;color:var(--muted)}
+  .surge{background:#fde2e2;color:var(--red);border:1px solid #f5c2c2;border-radius:10px;padding:12px;font-weight:700}
+  .ok{background:#e3f3e8;color:var(--green);border-radius:10px;padding:10px}
+  h3{font-size:14px;color:var(--muted);margin:14px 0 4px}
+  .tk{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-top:6px;background:#fff;font-size:13px}
+  .tk .id{font-weight:800;color:var(--blue)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState,useEffect}=React;
+const T={
+  en:{t1:'Hotel Queue & Booking Agent',t2:'Check-in + room booking via site/QR/WhatsApp/voice/SMS — India-ready (EN/हिंदी/日本語)',guest:'Guest name / phone',ci:'Check-in',ciBtn:'Check in',book:'Book room',room:'Room type (Deluxe/Standard/Suite)',nights:'Nights',bkBtn:'Book',q:'Lobby queue',bk:'Bookings',ch:'via'},
+  hi:{t1:'होटल कतार और बुकिंग एजेंट',t2:'चेक-इन + कमरा बुकिंग: साइट/QR/WhatsApp/कॉल/SMS — भारत के लिए',guest:'अतिथि का नाम / फ़ोन',ci:'चेक-इन',ciBtn:'चेक-इन करें',book:'कमरा बुक करें',room:'कमरा प्रकार (Deluxe/Standard/Suite)',nights:'रातें',bkBtn:'बुक करें',q:'लॉबी कतार',bk:'बुकिंग',ch:'माध्यम'},
+  ja:{t1:'ホテル受付・予約エージェント',t2:'サイト/QR/WhatsApp/音声/SMSでチェックイン＋予約（EN/हिंदी/日本語対応）',guest:'お客様名 / 電話',ci:'受付',ciBtn:'受付する',book:'部屋予約',room:'部屋タイプ (Deluxe/Standard/Suite)',nights:'泊数',bkBtn:'予約する',q:'ロビー列',bk:'予約一覧',ch:'経路'}
+};
+function App(){
+  const [loc,setLoc]=useState('en');
+  const [guest,setGuest]=useState('');
+  const [room,setRoom]=useState('Deluxe');
+  const [nights,setNights]=useState(1);
+  const [trace,setTrace]=useState([]);
+  const [mem,setMem]=useState({queue:[],bookings:[],notifications:[],cfg:{surgeThreshold:10}});
+  const [busy,setBusy]=useState(false);
+  const L=T[loc];
+  const channels=[['site',loc==='ja'?'サイト':'Site'],['qr','QR'],['whatsapp','WhatsApp'],['voice',loc==='ja'?'音声':'Voice'],['sms','SMS'],['message',loc==='ja'?'メッセージ':'Msg']];
+  async function refresh(){ const s=await fetch('/api/state').then(r=>r.json()); setMem(s); }
+  useEffect(()=>{refresh();},[]);
+  async function run(steps){ setTrace([]); setBusy(true); for(const s of steps){ setTrace(prev=>[...prev,s]); await new Promise(res=>setTimeout(res,250)); } setBusy(false); refresh(); }
+  async function ci(ch){ if(!guest.trim())return; const r=await fetch('/api/checkin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guest:guest.trim(),channel:ch,locale:loc})}); run((await r.json()).steps); }
+  async function bk(){ if(!guest.trim())return; const r=await fetch('/api/book',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({guest:guest.trim(),roomType:room,nights,channel:'whatsapp',locale:loc})}); run((await r.json()).steps); }
+  const waiting=mem.queue.filter(q=>q.status==='waiting').length;
+  const surge=waiting>=mem.cfg.surgeThreshold;
+  return (
+    <div>
+      <header><div className="wrap" style={{padding:0}}>
+        <div className="lang">{['en','hi','ja'].map(x=>{const n={en:'EN',hi:'हिं',ja:'日'}[x];return <button key={x} onClick={()=>setLoc(x)} style={{background:x===loc?'#fff':'rgba(255,255,255,.2)',color:x===loc?'var(--blue)':'#fff'}}>{n}</button>;})}</div>
+        <h1>🏨 {L.t1}</h1>
+        <p>{L.t2}</p>
+        <span className="badge">भारत / India</span><span className="badge">WhatsApp + SMS</span><span className="badge">Port 8096</span>
+      </div></header>
+      <div className="wrap">
+        <div className="card">
+          <h3 style={{marginTop:0}}>{L.guest}</h3>
+          <input value={guest} onChange={e=>setGuest(e.target.value)} placeholder="+91 98765 43210 / Rahul" />
+          <div className="chips">{channels.map(([c,n])=><span key={c} className="chip" onClick={()=>ci(c)}>{L.ci}: {n}</span>)}</div>
+          <div style={{marginTop:12}}><h3>{L.book}</h3>
+            <input value={room} onChange={e=>setRoom(e.target.value)} placeholder={L.room} />
+            <input type="number" value={nights} onChange={e=>setNights(e.target.value)} placeholder={L.nights} style={{width:120}} />
+            <button className="go" disabled={busy} onClick={bk}>{L.bkBtn}</button>
+          </div>
+        </div>
+        {trace.length>0&&<div className="card"><h3 style={{marginTop:0}}>Agent</h3>
+          <div className="trace">{trace.map((s,i)=><div key={i} className={'step '+s.tool}><b>{s.tool}</b><div>{s.result}</div></div>)}</div>
+        </div>}
+        <div className="grid2">
+          <div className="card"><h3 style={{marginTop:0}}>{L.q}</h3>
+            {surge?<div className="surge">⚠️ {waiting} waiting</div>:<div className="ok">✅ {waiting} waiting</div>}
+            {mem.queue.map(q=><div key={q.id} className="tk"><span><b>{q.id}</b> {q.guest} <small style={{color:'#5b6b7d'}}>({L.ch}:{q.channel})</small></span><span>{q.status}</span></div>)}
+          </div>
+          <div className="card"><h3 style={{marginTop:0}}>{L.bk}</h3>
+            {mem.bookings.map(b=><div key={b.id} className="tk"><span><b>{b.id}</b> {b.guest}<br/><small style={{color:'#5b6b7d'}}>{b.roomType} ×{b.nights} · {b.checkin} · {L.ch}:{b.channel}</small></span><span>{b.status}</span></div>)}
+            {!mem.bookings.length&&<small style={{color:'#5b6b7d'}}>—</small>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
