@@ -25,6 +25,8 @@ const server = http.createServer(async (req, res) => {
   // ---- Public data ----
   if (req.method === 'GET' && url.pathname === '/api/rooms') return send(res, 200, DB.rooms());
   if (req.method === 'GET' && url.pathname === '/api/stats') return send(res, 200, DB.stats());
+  if (req.method === 'GET' && url.pathname === '/api/state') return send(res, 200, DB.stats());
+  if (req.method === 'GET' && url.pathname === '/api/overview') return send(res, 200, DB.stats());
 
   // ---- Public booking / enquiry ----
   if (req.method === 'POST' && url.pathname === '/api/book') {
