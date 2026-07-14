@@ -1,0 +1,40 @@
+{
+  "queue": [
+    {
+      "id": "HQ001",
+      "guest": "+91 98765 43210",
+      "channel": "whatsapp",
+      "joinedAt": 1783944135148,
+      "status": "waiting",
+      "phone": "+910000000000"
+    }
+  ],
+  "bookings": [
+    {
+      "id": "BK001",
+      "guest": "Rahul",
+      "roomType": "Deluxe",
+      "checkin": "today",
+      "nights": 2,
+      "channel": "whatsapp",
+      "status": "confirmed",
+      "ts": "2026-07-13T12:02:15.185Z"
+    },
+    {
+      "id": "BK002",
+      "guest": "+91 98765 43210 Rahul",
+      "roomType": "Suite",
+      "checkin": "today",
+      "nights": 3,
+      "channel": "whatsapp",
+      "phone": "+910000000000",
+      "status": "confirmed",
+      "ts": "2026-07-13T12:02:50.039Z"
+    }
+  ],
+  "notifications": [],
+  "cfg": {
+    "surgeThreshold": 10,
+    "locale": "en"
+  }
+}
