@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { intake, reserve, getMemory, checkSurge } = require('./agent-core');
 const DB = require('./db');
+const { handoff } = require('/root/shared/handoff');
 
 const PUBLIC = path.join(__dirname, 'public');
 const MIME = { '.html': 'text/html', '.js': 'application/javascript', '.css': 'text/css', '.json': 'application/json' };
@@ -39,6 +40,11 @@ const server = http.createServer(async (req, res) => {
     const b = await body();
     if (!b.name || !b.phone) return send(res, 400, { error: 'name + phone required' });
     DB.enquiry(b);
+    // Handoff: if enquiry mentions transport, notify the car-agent (guest mobility).
+    const txt = (b.message || b.notes || '').toLowerCase();
+    if (/taxi|cab|car|transport|airport|drop|pickup|drive/.test(txt)) {
+      handoff('car', { text: `Hotel guest ${b.name} (${b.phone}) enquired about transport: "${b.message || ''}". Offer airport pickup / drop or rental.`, locale: b.locale || 'en' });
+    }
     return send(res, 200, { ok: true, message: 'Thank you — we will call you back shortly.' });
   }
   if (req.method === 'POST' && url.pathname === '/api/checkin') {
